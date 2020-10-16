@@ -8,7 +8,7 @@ export interface ProcessedResult {
   clean: boolean;
 }
 
-function index(array: string[]): { [key: string]: boolean } {
+function index(array: string[]): { [key: string]: boolean; } {
   return array.reduce((acc, str) => {
     acc[str] = true;
     return acc;

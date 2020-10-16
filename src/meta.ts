@@ -4,16 +4,6 @@ import { ensureArray } from './ensureArray';
 import { Context, PackageJson, TsConfig } from './index';
 import { resolveImport } from './traverse';
 
-export async function getProjectType(
-  projectPath: string,
-): Promise<Context['type']> {
-  if (await fs.exists('.meteor', projectPath)) {
-    return 'meteor';
-  }
-
-  return 'node';
-}
-
 export async function getAliases(
   projectPath: string,
 ): Promise<Context['aliases']> {
@@ -109,30 +99,6 @@ export async function getEntry(
 
   if (!packageJson) {
     throw new Error('could not load package.json');
-  }
-
-  if (context.type === 'meteor') {
-    if (!packageJson.meteor?.mainModule) {
-      throw new Error(
-        'Meteor projects are only supported if the mainModule is defined in package.json',
-      );
-    }
-
-    const client = await resolveImport(
-      packageJson.meteor.mainModule.client,
-      projectPath,
-      context,
-    );
-    const server = await resolveImport(
-      packageJson.meteor.mainModule.server,
-      projectPath,
-      context,
-    );
-
-    return [
-      client.type !== 'unresolved' && client.path,
-      server.type !== 'unresolved' && server.path,
-    ].filter(isString);
   }
 
   const { source, main } = packageJson;

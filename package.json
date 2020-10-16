@@ -3,7 +3,10 @@
   "version": "1.5.0",
   "description": "Scans your nodejs project folder and shows obsolete files and modules",
   "main": "./dist/unimported.js",
-  "bin": "./bin/unimported.js",
+  "bin": {
+    "unimported": "./bin/unimported.js",
+    "scandeadcode": "./bin/unimported.js"
+  },
   "source": "./src/index.ts",
   "license": "MIT",
   "author": "Stephan Meijer <stephan@meijer.ws>",

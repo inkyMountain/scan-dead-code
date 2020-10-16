@@ -29,10 +29,6 @@ export interface TraverseResult {
 }
 
 function getDependencyName(path: string, context: Context): string | null {
-  if (context.type === 'meteor' && path.startsWith('meteor/')) {
-    return path;
-  }
-
   const [namespace, module] = path.split('/');
   const name = path[0] === '@' ? `${namespace}/${module}` : namespace;
 

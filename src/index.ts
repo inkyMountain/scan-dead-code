@@ -26,17 +26,11 @@ export interface PackageJson {
   version: string;
   main?: string;
   source?: string;
-  dependencies?: { [name: string]: string };
-  optionalDependencies?: { [name: string]: string };
-  devDependencies?: { [name: string]: string };
-  bundleDependencies?: { [name: string]: string };
-  peerDependencies?: { [name: string]: string };
-  meteor?: {
-    mainModule?: {
-      client: string;
-      server: string;
-    };
-  };
+  dependencies?: { [name: string]: string; };
+  optionalDependencies?: { [name: string]: string; };
+  devDependencies?: { [name: string]: string; };
+  bundleDependencies?: { [name: string]: string; };
+  peerDependencies?: { [name: string]: string; };
   repository?: {
     directory: string;
   };
@@ -46,17 +40,17 @@ export interface Context {
   version: string;
   cwd: string;
   entry: string[];
-  aliases: { [key: string]: string[] };
+  aliases: { [key: string]: string[]; };
   ignore: string[];
   extensions: string[];
-  dependencies: { [key: string]: string };
-  peerDependencies: { [key: string]: string };
-  type: 'meteor' | 'node';
+  dependencies: { [key: string]: string; };
+  peerDependencies: { [key: string]: string; };
   flow?: boolean;
   config: UnimportedConfig;
   moduleDirectory: string[];
 }
 
+/* eslint-disable-next-line */
 async function main(args: CliArguments) {
   const spinner = ora('initializing').start();
   const cwd = process.cwd();
@@ -65,11 +59,10 @@ async function main(args: CliArguments) {
     const config = await getConfig();
     args.flow = config.flow ?? args.flow;
 
-    const [aliases, dependencies, peerDependencies, type] = await Promise.all([
+    const [aliases, dependencies, peerDependencies] = await Promise.all([
       meta.getAliases(cwd),
       meta.getDependencies(cwd),
       meta.getPeerDependencies(cwd),
-      meta.getProjectType(cwd),
     ]);
 
     const packageJson = await readJson<PackageJson>(
@@ -89,7 +82,6 @@ async function main(args: CliArguments) {
       aliases,
       dependencies,
       peerDependencies,
-      type,
       extensions: config.extensions || ['.js', '.jsx', '.ts', '.tsx'],
       ignore: [],
       entry: [],
@@ -109,9 +101,6 @@ async function main(args: CliArguments) {
         '**/tests/**',
         '**/__tests__/**',
         '**/*.d.ts',
-        ...(context.type === 'meteor'
-          ? ['packages/**', 'public/**', 'private/**', 'tests/**']
-          : []),
       ].filter(Boolean) as string[]);
 
     if (args.init) {
@@ -129,6 +118,7 @@ async function main(args: CliArguments) {
     // traverse the file system and get system data
     spinner.text = 'traverse the file system';
     const baseUrl = (await fs.exists('src', cwd)) ? join(cwd, 'src') : cwd;
+    // 获取 src 目录下所有文件
     const files = await fs.list('**/*', baseUrl, {
       extensions: context.extensions,
       ignore: context.ignore,
