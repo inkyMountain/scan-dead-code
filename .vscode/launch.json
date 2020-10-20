@@ -8,16 +8,19 @@
       "type": "node",
       "request": "launch",
       "name": "Launch Program",
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
-      "program": "${workspaceFolder}/dist/index.js",
+      "skipFiles": ["<node_internals>/**"],
+      // "program": "${workspaceFolder}/dist/index.js",
       // "program": "${file}",
-      // 如果
       // "preLaunchTask": "Build TypeScript",
-      "outFiles": [
-        "${workspaceFolder}/dist/**/*.js"
-      ]
+      "program": "${workspaceFolder}/dist/parsers/vueParser.js",
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      // "runtimeExecutable": "scandeadcode",
+      // "runtimeArgs": [
+      //   "--entry",
+      //   "D:\\frontend\\playground\\scan-dead-code\\src\\testFolder",
+      //   "--sourceDir",
+      //   "src\\testFolder",
+      // ]
     }
   ]
 }

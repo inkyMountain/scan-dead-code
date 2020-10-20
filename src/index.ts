@@ -15,6 +15,7 @@ import {
   UnimportedConfig,
   writeConfig,
 } from './config';
+import { codeExtensions } from './const';
 
 export interface TsConfig {
   compilerOptions: CompilerOptions;
@@ -47,10 +48,11 @@ export interface Context {
   flow?: boolean;
   config: UnimportedConfig;
   moduleDirectory: string[];
+  sourceDir: string;
 }
 
 /* eslint-disable-next-line */
-async function main(args: CliArguments) {
+async function main({ entry: entryInCliArguments, sourceDir, ...args }: CliArguments) {
   const spinner = ora('initializing').start();
   const cwd = process.cwd();
 
@@ -75,9 +77,7 @@ async function main(args: CliArguments) {
 
     const moduleDirectory = config.moduleDirectory ?? ['node_modules'];
 
-    const defaultJavaScriptExtensions = [
-      '.js', '.jsx', '.ts', '.tsx', '.vue'
-    ];
+    const defaultJavaScriptExtensions = codeExtensions;
     const defaultImageExtensions = [
       '.png',
       '.jpg',
@@ -97,9 +97,10 @@ async function main(args: CliArguments) {
       peerDependencies,
       extensions: config.extensions || [...defaultExtensions],
       ignore: [],
-      entry: [],
+      entry: entryInCliArguments ? [entryInCliArguments] : [],
       config,
       moduleDirectory,
+      sourceDir: sourceDir || 'src',
       ...args,
     };
 
@@ -127,12 +128,12 @@ async function main(args: CliArguments) {
     context.entry = config.entry || (await meta.getEntry(cwd, context));
     spinner.text = `resolving imports`;
     const traverseResult = await traverse(context.entry, context);
-    traverseResult.files = new Map([...traverseResult.files].sort());
+    traverseResult.codeFiles = new Map([...traverseResult.codeFiles].sort());
 
     // traverse the file system and get system data
     spinner.text = 'traverse the file system';
     // const baseUrl = (await fs.exists('src', cwd)) ? join(cwd, 'src') : cwd;
-    const baseUrl = (await fs.exists('src', cwd)) ? join(cwd, 'src') : cwd;
+    const baseUrl = (await fs.exists(context.sourceDir, cwd)) ? join(cwd, context.sourceDir) : cwd;
     // 获取 src 目录下所有文件
     const files = await fs.list('**/*', baseUrl, {
       extensions: context.extensions,
@@ -162,6 +163,8 @@ async function main(args: CliArguments) {
 interface CliArguments {
   flow: boolean;
   init: boolean;
+  entry: string;
+  sourceDir: string;
 }
 
 yargs
@@ -182,11 +185,25 @@ yargs
         type: 'boolean',
         describe: 'indicates if your code is annotated with flow types',
       });
+
+      yargs.option('entry', {
+        alias: 'e',
+        type: 'string',
+        describe: 'specify entry file',
+      });
+
+      yargs.option('sourceDir', {
+        alias: 's',
+        type: 'string',
+        describe: 'specify base source directory, for statistic summary.',
+      });
     },
     function (argv: Arguments<CliArguments>) {
       return main({
         init: argv.init,
         flow: argv.flow,
+        entry: argv.entry,
+        sourceDir: argv.sourceDir
       });
     },
   )

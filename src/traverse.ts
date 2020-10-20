@@ -1,19 +1,11 @@
-import { dirname, extname } from 'path';
+import { extname, normalize as normalizePath } from 'path';
 import { Context } from './index';
-import {
-  AST_NODE_TYPES,
-  parse as parseEstree,
-  TSESTree,
-} from '@typescript-eslint/typescript-estree';
-import * as fs from './fs';
-import Traverser from 'eslint/lib/shared/traverser';
-import {
-  Identifier,
-  Literal,
-} from '@typescript-eslint/typescript-estree/dist/ts-estree/ts-estree';
+
 import resolve from 'resolve';
 import chalk from 'chalk';
-import removeFlowTypes from 'flow-remove-types';
+import { codeExtensions } from './const';
+import parseVueFile from './parsers/vueParser';
+import parseJsFile from './parsers/jsParser';
 
 export interface FileStats {
   path: string;
@@ -24,8 +16,9 @@ export interface FileStats {
 
 export interface TraverseResult {
   unresolved: Set<string>;
-  files: Map<string, FileStats>;
+  codeFiles: Map<string, FileStats>;
   modules: Set<string>;
+  staticFiles: Set<string>;
 }
 
 function getDependencyName(path: string, context: Context): string | null {
@@ -54,6 +47,10 @@ export type ResolvedResult =
     path: string;
   }
   | {
+    type: 'static_file';
+    path: string;
+  }
+  | {
     type: 'unresolved';
     path: string;
   };
@@ -69,22 +66,26 @@ export function resolveImport(
     return {
       type: 'node_module',
       name: dependencyName,
-      path,
+      path: normalizePath(path),
     };
   }
 
   try {
     return {
       type: 'source_file',
-      path: resolve
-        .sync(path, {
-          basedir: cwd,
-          extensions: context.extensions,
-          moduleDirectory: context.moduleDirectory,
-        })
-        .replace(/\\/g, '/'),
+      path: normalizePath(
+        resolve
+          .sync(path, {
+            basedir: cwd,
+            extensions: context.extensions,
+            moduleDirectory: context.moduleDirectory,
+          })
+          .replace(/\\/g, '/')
+      )
     };
   } catch (e) { }
+
+  const staticFileExtensions = context.extensions.filter(extension => !codeExtensions.includes(extension));
 
   const aliases = Object.keys(context.aliases).filter((alias) =>
     path.startsWith(alias),
@@ -94,14 +95,16 @@ export function resolveImport(
     for (const alt of context.aliases[alias]) {
       try {
         return {
-          type: 'source_file',
-          path: resolve
-            .sync(path.replace(alias, alt), {
-              basedir: cwd,
-              extensions: context.extensions,
-              moduleDirectory: context.moduleDirectory,
-            })
-            .replace(/\\/g, '/'),
+          type: staticFileExtensions.includes(extname(path)) ? 'static_file' : 'source_file',
+          path: normalizePath(
+            resolve
+              .sync(path.replace(alias, alt), {
+                basedir: cwd,
+                extensions: context.extensions,
+                moduleDirectory: context.moduleDirectory,
+              })
+              .replace(/\\/g, '/')
+          )
         };
       } catch (e) { }
     }
@@ -112,13 +115,15 @@ export function resolveImport(
   try {
     return {
       type: 'source_file',
-      path: resolve
-        .sync(`./${path}`, {
-          basedir: cwd,
-          extensions: context.extensions,
-          moduleDirectory: context.moduleDirectory,
-        })
-        .replace(/\\/g, '/'),
+      path: normalizePath(
+        resolve
+          .sync(`./${path}`, {
+            basedir: cwd,
+            extensions: context.extensions,
+            moduleDirectory: context.moduleDirectory,
+          })
+          .replace(/\\/g, '/')
+      )
     };
   } catch (e) { }
 
@@ -129,85 +134,11 @@ export function resolveImport(
   };
 }
 
-async function parse(path: string, context: Context): Promise<FileStats> {
-  const stats: FileStats = {
-    path,
-    extname: extname(path),
-    dirname: dirname(path),
-    imports: [],
-  };
-
-  // this jsx check isn't bullet proof, but I have no idea how we can deal with
-  // this better. The parser will fail on generics like <T> in jsx files, if we
-  // don't specify those as being jsx.
-  let code = await fs.readText(path);
-
-  // removeFlowTypes checks for pragma's, use app arguments to override and
-  // strip flow annotations from all files, regardless if it contains the pragma
-  code = removeFlowTypes(code, { all: context.flow });
-
-  const ast = parseEstree(code, {
-    comment: false,
-    jsx: stats.extname !== '.ts',
-  });
-
-  Traverser.traverse(ast, {
-    enter(node: TSESTree.Node) {
-      let target;
-
-      switch (node.type) {
-        // import x from './x';
-        case AST_NODE_TYPES.ImportDeclaration:
-          if (!node.source || !(node.source as Literal).value) {
-            break;
-          }
-          target = (node.source as Literal).value as string;
-          break;
-
-        // export { x } from './x';
-        case AST_NODE_TYPES.ExportNamedDeclaration:
-          if (!node.source || !(node.source as Literal).value) {
-            break;
-          }
-          target = (node.source as Literal).value as string;
-          break;
-
-        // export * from './x';
-        case AST_NODE_TYPES.ExportAllDeclaration:
-          if (!node.source) {
-            break;
-          }
-
-          target = (node.source as Literal).value as string;
-          break;
-
-        // import('.x') || require('./x') || await import('.x') || await require('./x')
-        case AST_NODE_TYPES.CallExpression: {
-          if (
-            node.callee.type !== 'Import' &&
-            (node.callee as Identifier)?.name !== 'require'
-          ) {
-            break;
-          }
-          target = (node.arguments[0] as Literal).value;
-          break;
-        }
-      }
-
-      if (target) {
-        const resolved = resolveImport(target, stats.dirname, context);
-        stats.imports.push(resolved);
-      }
-    },
-  });
-
-  return stats;
-}
-
-const getResultObject = () => ({
+const getResultObject: () => TraverseResult = () => ({
   unresolved: new Set<string>(),
   modules: new Set<string>(),
-  files: new Map<string, FileStats>(),
+  codeFiles: new Map<string, FileStats>(),
+  staticFiles: new Set<string>(),
 });
 
 export async function traverse(
@@ -221,7 +152,7 @@ export async function traverse(
   }
 
   // be sure to only process each file once, and not end up in recursion troubles
-  if (result.files.has(path)) {
+  if (result.codeFiles.has(path)) {
     return result;
   }
 
@@ -233,42 +164,49 @@ export async function traverse(
   let importInfo;
   try {
     // 如果不是代码文件，则不使用 parser 进行转换。
-    const codeExtensions = ['.js', '.ts', '.jsx', '.tsx'];
     const isCodeFile = codeExtensions.reduce((result, extension, index, extensions) => {
       return result || extensions.includes(extname(path));
     }, false);
 
     if (isCodeFile) {
-      importInfo = await parse(path, context);
+      // 根据文件后缀调用对应转换方法:
+      // .vue -> parseVueFile
+      // .js .jsx .ts .tsx -> parseJsFile
+      importInfo = extname(path) === '.vue'
+        ? await parseVueFile(path, context)
+        : await parseJsFile(path, context);
+      result.codeFiles.set(path, importInfo);
     } else {
-      importInfo = {
-        imports: []
-      }
+      result.staticFiles.add(path);
     }
-    result.files.set(path, importInfo);
-
   } catch (e) {
     console.log(chalk.redBright(`\nFailed parsing ${path}`));
     console.log(e);
     process.exit(1);
   }
 
-  for (const file of importInfo.imports) {
-    switch (file.type) {
-      case 'node_module':
-        result.modules.add(file.name);
-        break;
-      case 'unresolved':
-        result.unresolved.add(file.path);
-        break;
-      case 'source_file':
-        if (result.files.has(file.path)) {
+  // 只有代码文件可以经过 parse 处理，得到 importInfo 对象，
+  // 并且需要对 imoprtInfo 中的路径进行递归。
+  // 图片文件没有这个过程。
+  if (importInfo?.imports) {
+    for (const file of importInfo.imports) {
+      switch (file.type) {
+        case 'node_module':
+          result.modules.add(file.name);
           break;
-        }
-        await traverse(file.path, context, result);
-        break;
+        case 'unresolved':
+          result.unresolved.add(file.path);
+          break;
+        case 'source_file':
+          if (result.codeFiles.has(file.path)) {
+            break;
+          }
+          await traverse(file.path, context, result);
+          break;
+      }
     }
   }
+
 
   return result;
 }

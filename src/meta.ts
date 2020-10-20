@@ -101,9 +101,9 @@ export async function getEntry(
     throw new Error('could not load package.json');
   }
 
-  const { source, main } = packageJson;
+  const { main } = packageJson;
   const options = [
-    source,
+    ...context.entry,
     './src/index',
     './src/main',
     './index',

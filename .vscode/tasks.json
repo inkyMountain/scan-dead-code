@@ -10,6 +10,16 @@
         "reveal": "always",
         "panel": "new"
       }
-    }
+    },
+		{
+      "label": "Test Scanner",
+      "type": "shell",
+      "command": "scandeadcode --entry D:\\frontend\\playground\\scan-dead-code\\src\\testFolder",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
 	]
 }

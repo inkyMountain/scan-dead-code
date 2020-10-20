@@ -76,11 +76,17 @@ export async function list(
     cwd,
     realpath: true,
     ...globOptions,
+  }).then((paths) => {
+    return paths.map((path) => {
+      // 将形如 d:\\some\\path 的路径的盘符变成大写。
+      const driverLetterRegex = /^[a-z]:\\/;
+      const isDriverLetterLowerCase = driverLetterRegex.test(path);
+      if (isDriverLetterLowerCase) {
+        const pathStringArray = path.split('');
+        pathStringArray.splice(0, 1, path[0].toUpperCase());
+        path = pathStringArray.join('');
+      }
+      return path;
+    });
   });
-
-  // new Promise((resolve, reject) => glob(fullPattern, {
-  //   ...globOptions,
-  //   cwd,
-  //   realpath: true
-  // }, (error, result) => error ? reject(error) : resolve(result)));
 }
