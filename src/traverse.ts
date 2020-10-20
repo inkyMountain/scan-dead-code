@@ -45,18 +45,18 @@ function getDependencyName(path: string, context: Context): string | null {
 
 export type ResolvedResult =
   | {
-      type: 'node_module';
-      name: string;
-      path: string;
-    }
+    type: 'node_module';
+    name: string;
+    path: string;
+  }
   | {
-      type: 'source_file';
-      path: string;
-    }
+    type: 'source_file';
+    path: string;
+  }
   | {
-      type: 'unresolved';
-      path: string;
-    };
+    type: 'unresolved';
+    path: string;
+  };
 
 export function resolveImport(
   path: string,
@@ -84,7 +84,7 @@ export function resolveImport(
         })
         .replace(/\\/g, '/'),
     };
-  } catch (e) {}
+  } catch (e) { }
 
   const aliases = Object.keys(context.aliases).filter((alias) =>
     path.startsWith(alias),
@@ -103,7 +103,7 @@ export function resolveImport(
             })
             .replace(/\\/g, '/'),
         };
-      } catch (e) {}
+      } catch (e) { }
     }
   }
 
@@ -120,7 +120,7 @@ export function resolveImport(
         })
         .replace(/\\/g, '/'),
     };
-  } catch (e) {}
+  } catch (e) { }
 
   // if nothing else works out :(
   return {
@@ -230,17 +230,30 @@ export async function traverse(
     return result;
   }
 
-  let parseResult;
+  let importInfo;
   try {
-    parseResult = await parse(path, context);
-    result.files.set(path, parseResult);
+    // 如果不是代码文件，则不使用 parser 进行转换。
+    const codeExtensions = ['.js', '.ts', '.jsx', '.tsx'];
+    const isCodeFile = codeExtensions.reduce((result, extension, index, extensions) => {
+      return result || extensions.includes(extname(path));
+    }, false);
+
+    if (isCodeFile) {
+      importInfo = await parse(path, context);
+    } else {
+      importInfo = {
+        imports: []
+      }
+    }
+    result.files.set(path, importInfo);
+
   } catch (e) {
     console.log(chalk.redBright(`\nFailed parsing ${path}`));
     console.log(e);
     process.exit(1);
   }
 
-  for (const file of parseResult.imports) {
+  for (const file of importInfo.imports) {
     switch (file.type) {
       case 'node_module':
         result.modules.add(file.name);

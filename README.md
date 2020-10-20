@@ -34,10 +34,6 @@ This option will write the default ignore patterns to the `.unimportedrc.json` s
 npx unimported --init
 ```
 
-### Update
-
-Update, will write the current results to the ignore lists in `.unimportedrc.json`. You want to use this option **after running and verifying** a full scan. Ignore lists are used to ignore certain false positives that could not be resolved properly. This is especially useful when running `unimported` on a regular basis, or for example as part of a CI pipeline.
-
 ```shell
 npx unimported --update
 ```

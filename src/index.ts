@@ -13,7 +13,6 @@ import { processResults } from './process';
 import {
   getConfig,
   UnimportedConfig,
-  updateAllowLists,
   writeConfig,
 } from './config';
 
@@ -76,13 +75,27 @@ async function main(args: CliArguments) {
 
     const moduleDirectory = config.moduleDirectory ?? ['node_modules'];
 
+    const defaultJavaScriptExtensions = [
+      '.js', '.jsx', '.ts', '.tsx', '.vue'
+    ];
+    const defaultImageExtensions = [
+      '.png',
+      '.jpg',
+      '.jpeg',
+      '.svg',
+      '.gif',
+      '.tif',
+      '.bmp'
+    ];
+    const defaultExtensions = [...defaultJavaScriptExtensions, ...defaultImageExtensions];
+
     const context: Context = {
       version: packageJson.version,
       cwd,
       aliases,
       dependencies,
       peerDependencies,
-      extensions: config.extensions || ['.js', '.jsx', '.ts', '.tsx'],
+      extensions: config.extensions || [...defaultExtensions],
       ignore: [],
       entry: [],
       config,
@@ -103,6 +116,7 @@ async function main(args: CliArguments) {
         '**/*.d.ts',
       ].filter(Boolean) as string[]);
 
+    // 输出默认配置文件
     if (args.init) {
       await writeConfig({ ignorePatterns: context.ignore }, context);
       spinner.stop();
@@ -117,6 +131,7 @@ async function main(args: CliArguments) {
 
     // traverse the file system and get system data
     spinner.text = 'traverse the file system';
+    // const baseUrl = (await fs.exists('src', cwd)) ? join(cwd, 'src') : cwd;
     const baseUrl = (await fs.exists('src', cwd)) ? join(cwd, 'src') : cwd;
     // 获取 src 目录下所有文件
     const files = await fs.list('**/*', baseUrl, {
@@ -129,19 +144,13 @@ async function main(args: CliArguments) {
 
     const result = await processResults(files, traverseResult, context);
 
-    if (args.update) {
-      await updateAllowLists(result, context);
-      // doesn't make sense here to return a error code
-      process.exit(0);
-    } else {
-      printResults(result, context);
-    }
+    printResults(result, context);
 
     // return non-zero exit code in case the result wasn't clean, to support
     // running in CI environments.
-    if (!result.clean) {
-      process.exit(1);
-    }
+    // if (!result.clean) {
+    //   process.exit(1);
+    // }
   } catch (error) {
     spinner.stop();
     console.error(chalk.redBright('something unexpected happened'));
@@ -152,7 +161,6 @@ async function main(args: CliArguments) {
 
 interface CliArguments {
   flow: boolean;
-  update: boolean;
   init: boolean;
 }
 
@@ -174,17 +182,10 @@ yargs
         type: 'boolean',
         describe: 'indicates if your code is annotated with flow types',
       });
-
-      yargs.option('update', {
-        alias: 'u',
-        type: 'boolean',
-        describe: 'update the ignore-lists stored in .unimportedrc.json',
-      });
     },
     function (argv: Arguments<CliArguments>) {
       return main({
         init: argv.init,
-        update: argv.update,
         flow: argv.flow,
       });
     },

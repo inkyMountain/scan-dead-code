@@ -1,7 +1,7 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
-    "rootDir": "src",
+    "rootDir": "./src",
     "target": "ES2015",
     "module": "CommonJS",
     "moduleResolution": "node",
@@ -12,14 +12,19 @@
     "esModuleInterop": true,
     "noImplicitAny": false,
     "declaration": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@test/*": ["src/testFolder/*"]
+    }
   },
   "include": [
-    "src",
-    "typings"
+    "."
   ],
   "exclude": [
     "node_modules",
-    "test/**"
+    "test/**",
+    "dist"
   ]
 }

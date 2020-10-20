@@ -27,15 +27,6 @@ export async function getConfig(): Promise<UnimportedConfig> {
   );
 }
 
-function sort(arr) {
-  const sorted = [...arr];
-  sorted.sort();
-  return sorted;
-}
-
-function merge(left, right) {
-  return sort(Array.from(new Set([...left, ...right])));
-}
 
 export async function writeConfig(
   config: Partial<UnimportedConfig>,
@@ -43,20 +34,4 @@ export async function writeConfig(
 ) {
   const cfg = Object.assign({}, context.config, config);
   await writeJson('.unimportedrc.json', cfg);
-}
-
-export async function updateAllowLists(
-  files: ProcessedResult,
-  context: Context,
-) {
-  const cfg = context.config;
-
-  await writeConfig(
-    {
-      ignoreUnresolved: merge(cfg.ignoreUnresolved, files.unresolved),
-      ignoreUnused: merge(cfg.ignoreUnused, files.unused),
-      ignoreUnimported: merge(cfg.ignoreUnimported, files.unimported),
-    },
-    context,
-  );
 }

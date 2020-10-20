@@ -28,7 +28,7 @@ export async function getAliases(
 
   // add support for typescript path aliases
   if (tsconfig?.compilerOptions?.paths) {
-    const root = join(projectPath, tsconfig.compilerOptions.rootDir || '.');
+    const root = join(projectPath, tsconfig.compilerOptions.baseUrl || '.');
 
     // normalize the aliases. The keys maintain trailing '/' to ease path comparison,
     // in: { '@components/*': ['src/components/*'] }

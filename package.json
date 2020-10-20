@@ -1,19 +1,15 @@
 {
-  "name": "unimported",
-  "version": "1.5.0",
+  "name": "scan-dead-code",
+  "version": "0.0.1",
   "description": "Scans your nodejs project folder and shows obsolete files and modules",
   "main": "./dist/unimported.js",
   "bin": {
-    "unimported": "./bin/unimported.js",
-    "scandeadcode": "./bin/unimported.js"
+    "unimported": "./bin/unimported",
+    "scandeadcode": "./bin/unimported"
   },
-  "source": "./src/index.ts",
+  "source": "./test/index.ts",
   "license": "MIT",
-  "author": "Stephan Meijer <stephan@meijer.ws>",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/smeijer/unimported.git"
-  },
+  "author": "chenyitao",
   "scripts": {
     "build": "rimraf ./dist && tsc",
     "lint": "tsc --noEmit && eslint 'src/**/*.ts' --quiet --fix",
