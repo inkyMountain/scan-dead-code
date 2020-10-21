@@ -477,8 +477,9 @@ export default class extends Vue {
 }
 </script>
 
-<style lang="scss" scoped>
-  @import '@/assets/vars.scss';
+<style lang="less" scoped>
+  @import '@/testFolder/styles/reset.scss';
+  /* @import '../styles/reset.scss'; */
 
   .z-actionsheet__header {
     overflow: hidden;
@@ -500,7 +501,7 @@ export default class extends Vue {
     }
 
     100% {
-      background-color: #fff;
+      background-color: rgb(189, 101, 101);
     }
   }
 
@@ -541,7 +542,7 @@ export default class extends Vue {
 
         .z-button--link,
         .z-button--text {
-          color: $second-font;
+          /* color: $second-font; */
         }
       }
     }
@@ -569,7 +570,7 @@ export default class extends Vue {
     left: 0;
     bottom: 0;
     right: 0;
-    background-color: $gray-bg;
+    /* background-color: $gray-bg; */
     padding: 32px 32px 0;
 
     .sub-btn {
